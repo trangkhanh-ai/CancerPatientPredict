@@ -25,8 +25,23 @@ class ModelService:
             self.spark.sparkContext.setLogLevel("ERROR")
             if os.path.exists(settings.MODEL_PATH):
                 self.model = PipelineModel.load(settings.MODEL_PATH)
-                if os.path.exists(settings.MODEL_METADATA_PATH):
-                    self.metadata = json.load(open(settings.MODEL_METADATA_PATH, encoding="utf-8"))
+                if not os.path.exists(settings.MODEL_METADATA_PATH):
+                    raise RuntimeError("Missing MODEL_METADATA_PATH. Cannot map labels.")
+                self.metadata = json.load(open(settings.MODEL_METADATA_PATH, encoding="utf-8"))
+                
+                # Verify that metadata has index_to_label
+                if "index_to_label" not in self.metadata:
+                    raise RuntimeError("metadata.json missing 'index_to_label' (P0-01).")
+                
+                # Check fitted model labels vs metadata
+                try:
+                    fitted_labels = self.model.stages[0].labels
+                    idx_to_label = {str(i): lb for i, lb in enumerate(fitted_labels)}
+                    if self.metadata["index_to_label"] != idx_to_label:
+                        print("[model_service] WARNING: metadata.json mapping differs from fitted model. Trusting metadata.")
+                except Exception:
+                    pass
+
                 self.loaded = True
         except Exception as e:  # noqa: BLE001
             print(f"[model_service] NOT LOADED: {e}")
@@ -46,15 +61,16 @@ class ModelService:
             pred = self.model.transform(sdf).select("prediction", "probability").first()
             idx = int(pred["prediction"])
             probs = list(pred["probability"])
-            # ánh xạ index -> label theo StringIndexer trong model nếu có, else cố định
-            try:
-                labels = self.model.stages[0].labels
-                idx_to_label = {i: lb for i, lb in enumerate(labels)}
-            except Exception:  # noqa: BLE001
-                idx_to_label = INDEX_TO_LABEL
-            prob_map = {idx_to_label.get(i, str(i)): round(float(p), 4) for i, p in enumerate(probs)}
+            
+            # P0-01: Sử dụng mapping từ metadata (đảm bảo đúng nhãn)
+            idx_to_label = self.metadata.get("index_to_label", {})
+            idx_str = str(idx)
+            predicted_label = idx_to_label.get(idx_str, idx_str)
+            
+            prob_map = {idx_to_label.get(str(i), str(i)): round(float(p), 4) for i, p in enumerate(probs)}
+            
             return {
-                "predicted_level": idx_to_label.get(idx, str(idx)),
+                "predicted_level": predicted_label,
                 "predicted_index": idx,
                 "probabilities": {l: prob_map.get(l, 0.0) for l in LABELS},
                 "latency_ms": round((time.time() - t0) * 1000, 2),

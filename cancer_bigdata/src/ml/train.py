@@ -84,9 +84,28 @@ def main():
                          "label_order": LABELS, "train_time_s": round(time.time() - t0, 2)}
         run_dir = f"{args.out}/runs/{name}"
         os.makedirs(run_dir, exist_ok=True)
+        
+        # Save model
         model.write().overwrite().save(f"{run_dir}/pipeline_model")
+        
+        # Save metrics.json
         with open(f"{run_dir}/metrics.json", "w", encoding="utf-8") as f:
             json.dump(results[name], f, indent=2, ensure_ascii=False)
+            
+        # P0-01, P0-04: Export metadata.json for API to read label mapping
+        metadata = {
+            "model_run_id": f"{name}_{int(time.time())}",
+            "dataset_version": "1.0",
+            "algorithm": name,
+            "feature_list": FEATURE_COLUMNS,
+            "label_index_source": "StringIndexerModel.labels",
+            "index_to_label": {str(i): lb for i, lb in enumerate(idx_labels)},
+            "display_label_order": LABELS,
+            "metrics": metrics
+        }
+        with open(f"{run_dir}/metadata.json", "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2, ensure_ascii=False)
+            
         print(f"[{name}] accuracy={metrics['accuracy']:.4f} f1={metrics['f1']:.4f} confusion={cm}")
 
     # chọn model theo f1 (macro/weighted) — ở đây in ra để đối chiếu

@@ -1,109 +1,29 @@
+# -*- coding: utf-8 -*-
+"""
+Tiền xử lý dữ liệu từ file Excel gốc thành CSV sạch phục vụ MapReduce và ML.
+Đã loại bỏ hardcode đường dẫn, sử dụng tham số CLI để chạy linh hoạt trên mọi máy.
+"""
+import argparse
+import sys
+import os
 from pathlib import Path
-
 import pandas as pd
 
+# Import schema dùng chung
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from common.schema import FEATURE_COLUMNS, RAW_TO_CANONICAL, LABELS, LEVEL_ENCODING  # noqa: E402
 
-DATA_PATH = Path(r"D:\1BigDataproject1\cancer patient data sets.xlsx")
-OUTPUT_DIR = Path(r"D:\1BigDataproject1\cleandata cancer")
-
-RAW_TO_CLEAN_COLUMNS = {
-    "Patient Id": "patient_id",
-    "Age": "age",
-    "Gender": "gender",
-    "Air Pollution": "air_pollution",
-    "Alcohol use": "alcohol_use",
-    "Dust Allergy": "dust_allergy",
-    "OccuPational Hazards": "occupational_hazards",
-    "Genetic Risk": "genetic_risk",
-    "chronic Lung Disease": "chronic_lung_disease",
-    "Balanced Diet": "balanced_diet",
-    "Obesity": "obesity",
-    "Smoking": "smoking",
-    "Passive Smoker": "passive_smoker",
-    "Chest Pain": "chest_pain",
-    "Coughing of Blood": "coughing_of_blood",
-    "Fatigue": "fatigue",
-    "Weight Loss": "weight_loss",
-    "Shortness of Breath": "shortness_of_breath",
-    "Wheezing": "wheezing",
-    "Swallowing Difficulty": "swallowing_difficulty",
-    "Clubbing of Finger Nails": "clubbing_of_finger_nails",
-    "Frequent Cold": "frequent_cold",
-    "Dry Cough": "dry_cough",
-    "Snoring": "snoring",
-    "Level": "level",
-}
+# Lấy 21 biến số (loại trừ age, gender)
+NUMERIC_FEATURE_COLUMNS = FEATURE_COLUMNS
+RISK_SCALE_COLUMNS = [c for c in NUMERIC_FEATURE_COLUMNS if c not in {"age", "gender"}]
 
 IDENTIFICATION_COLUMNS = ["patient_id"]
-DEMOGRAPHIC_COLUMNS = ["age", "gender"]
-ENVIRONMENTAL_RISK_COLUMNS = [
-    "air_pollution",
-    "dust_allergy",
-    "occupational_hazards",
-]
-LIFESTYLE_COLUMNS = [
-    "alcohol_use",
-    "smoking",
-    "passive_smoker",
-    "balanced_diet",
-    "obesity",
-]
-GENETIC_MEDICAL_COLUMNS = ["genetic_risk", "chronic_lung_disease"]
-CLINICAL_SYMPTOM_COLUMNS = [
-    "chest_pain",
-    "coughing_of_blood",
-    "fatigue",
-    "weight_loss",
-    "shortness_of_breath",
-    "wheezing",
-    "swallowing_difficulty",
-    "clubbing_of_finger_nails",
-    "frequent_cold",
-    "dry_cough",
-    "snoring",
-]
-TARGET_COLUMNS = ["level"]
-
-NUMERIC_FEATURE_COLUMNS = [
-    "age",
-    "gender",
-    "air_pollution",
-    "alcohol_use",
-    "dust_allergy",
-    "occupational_hazards",
-    "genetic_risk",
-    "chronic_lung_disease",
-    "balanced_diet",
-    "obesity",
-    "smoking",
-    "passive_smoker",
-    "chest_pain",
-    "coughing_of_blood",
-    "fatigue",
-    "weight_loss",
-    "shortness_of_breath",
-    "wheezing",
-    "swallowing_difficulty",
-    "clubbing_of_finger_nails",
-    "frequent_cold",
-    "dry_cough",
-    "snoring",
-]
-RISK_SCALE_COLUMNS = [
-    column for column in NUMERIC_FEATURE_COLUMNS if column not in {"age", "gender"}
-]
-VALID_LEVELS = ["Low", "Medium", "High"]
-LEVEL_ENCODING = {"Low": 0, "Medium": 1, "High": 2}
-
-HDFS_OUTPUT = OUTPUT_DIR / "cancer_patients_clean_hdfs.csv"
-ML_OUTPUT = OUTPUT_DIR / "cancer_patients_ml_ready.csv"
-QUALITY_OUTPUT = OUTPUT_DIR / "cancer_cleaning_quality_report.csv"
 
 
-def load_source_dataset(data_path: Path = DATA_PATH) -> pd.DataFrame:
+def load_source_dataset(data_path: Path) -> pd.DataFrame:
     """Load the raw Excel dataset and validate the expected source schema."""
     df_raw = pd.read_excel(data_path)
-    expected_columns = list(RAW_TO_CLEAN_COLUMNS)
+    expected_columns = list(RAW_TO_CANONICAL.keys())
     missing_columns = [column for column in expected_columns if column not in df_raw.columns]
     unexpected_columns = [column for column in df_raw.columns if column not in expected_columns]
 
@@ -119,7 +39,7 @@ def load_source_dataset(data_path: Path = DATA_PATH) -> pd.DataFrame:
 
 def standardize_schema(df_raw: pd.DataFrame) -> pd.DataFrame:
     """Rename raw Excel columns to stable snake_case pipeline fields."""
-    return df_raw.rename(columns=RAW_TO_CLEAN_COLUMNS).copy()
+    return df_raw.rename(columns=RAW_TO_CANONICAL).copy()
 
 
 def clean_text_fields(df: pd.DataFrame) -> pd.DataFrame:
@@ -161,7 +81,7 @@ def build_quality_report(df: pd.DataFrame) -> pd.DataFrame:
         ),
         (
             "invalid_level",
-            int((~df["level"].isin(VALID_LEVELS)).sum()),
+            int((~df["level"].isin(LABELS)).sum()),
             "Count of records where level is not Low, Medium, or High.",
         ),
         ("row_count", int(len(df)), "Rows preserved after preprocessing."),
@@ -192,6 +112,7 @@ def add_age_group(df: pd.DataFrame) -> pd.DataFrame:
 def add_encoded_label(df: pd.DataFrame) -> pd.DataFrame:
     """Create the ordinal tree-model target while keeping the text label."""
     enriched = df.copy()
+    # P0-01: Ensure consistency using LEVEL_ENCODING from schema
     enriched["level_encoded"] = enriched["level"].map(LEVEL_ENCODING).astype("Int64")
     return enriched
 
@@ -223,18 +144,36 @@ def print_statistical_verification(df: pd.DataFrame) -> None:
     print(pd.crosstab(df["smoking"], df["level"]).to_string())
 
 
-def run_pipeline() -> dict[str, Path]:
-    """Execute the full Excel-to-CSV preprocessing pipeline."""
-    pd.set_option("display.max_columns", 80)
-    pd.set_option("display.width", 160)
+def main():
+    parser = argparse.ArgumentParser(description="Tiền xử lý dữ liệu ung thư.")
+    parser.add_argument("--input", required=True, help="Đường dẫn file Excel gốc")
+    parser.add_argument("--outdir", required=True, help="Thư mục đầu ra cho các file CSV")
+    parser.add_argument("--fail-on-invalid", action="store_true", help="Dừng chương trình nếu dữ liệu không hợp lệ")
+    args = parser.parse_args()
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    data_path = Path(args.input)
+    output_dir = Path(args.outdir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    df = load_source_dataset()
+    HDFS_OUTPUT = output_dir / "cancer_patients_clean_hdfs.csv"
+    ML_OUTPUT = output_dir / "cancer_patients_ml_ready.csv"
+    QUALITY_OUTPUT = output_dir / "cancer_cleaning_quality_report.csv"
+
+    print(f"Reading dataset from {data_path}...")
+    df = load_source_dataset(data_path)
     df = standardize_schema(df)
     df = clean_text_fields(df)
     df = cast_numeric_features(df)
+    
     quality_report = build_quality_report(df)
+    
+    # Kiểm tra P0-13: Fail fast policy
+    invalid_rows_sum = quality_report.loc[quality_report['check_name'].str.startswith('invalid_'), 'value'].sum()
+    if args.fail_on_invalid and invalid_rows_sum > 0:
+        print("\n[LỖI] Phát hiện dữ liệu không hợp lệ (Fail-fast policy):")
+        print(quality_report[quality_report['check_name'].str.startswith('invalid_')])
+        sys.exit(1)
+
     df = add_age_group(df)
     df = add_encoded_label(df)
 
@@ -246,15 +185,9 @@ def run_pipeline() -> dict[str, Path]:
 
     print_statistical_verification(df)
     print("\nExported files:")
-    for path in [HDFS_OUTPUT, ML_OUTPUT, QUALITY_OUTPUT]:
-        print(path)
-
-    return {
-        "hdfs": HDFS_OUTPUT,
-        "ml_ready": ML_OUTPUT,
-        "quality_report": QUALITY_OUTPUT,
-    }
-
+    print(f"- {HDFS_OUTPUT}")
+    print(f"- {ML_OUTPUT}")
+    print(f"- {QUALITY_OUTPUT}")
 
 if __name__ == "__main__":
-    run_pipeline()
+    main()

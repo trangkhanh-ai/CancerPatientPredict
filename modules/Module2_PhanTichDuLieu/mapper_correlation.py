@@ -34,7 +34,28 @@ def emit(k, v):
 
 def main():
     bad = 0
-    for row in csv.DictReader(sys.stdin):
+    
+    # P0-07: Không phụ thuộc vào header. Chạy an toàn với split của Hadoop.
+    COLUMNS = [
+        "patient_id", "age", "gender", "air_pollution", "alcohol_use", "dust_allergy",
+        "occupational_hazards", "genetic_risk", "chronic_lung_disease", "balanced_diet",
+        "obesity", "smoking", "passive_smoker", "chest_pain", "coughing_of_blood",
+        "fatigue", "weight_loss", "shortness_of_breath", "wheezing",
+        "swallowing_difficulty", "clubbing_of_finger_nails", "frequent_cold",
+        "dry_cough", "snoring", "level_encoded", "level"
+    ]
+    
+    reader = csv.reader(sys.stdin)
+    for row_list in reader:
+        if not row_list or row_list[0] == "patient_id" or row_list[-1] == "level":
+            continue  # Bỏ qua dòng trống hoặc dòng header
+            
+        if len(row_list) != len(COLUMNS):
+            bad += 1
+            continue
+            
+        row = dict(zip(COLUMNS, row_list))
+        
         lv = (row.get("level") or "").strip().title()
         if lv not in LEVELS:
             bad += 1
