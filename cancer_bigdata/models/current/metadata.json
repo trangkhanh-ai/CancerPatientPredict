@@ -1,0 +1,65 @@
+﻿{
+    "model_run_id":  "lr-group-aware-20260715",
+    "algorithm":  "LogisticRegression (multinomial, StandardScaler, regParam=0.0)",
+    "dataset_version":  "v20260715",
+    "trained_at":  "2026-07-15T19:06:57+07:00",
+    "feature_columns":  [
+                            "age",
+                            "gender",
+                            "air_pollution",
+                            "alcohol_use",
+                            "dust_allergy",
+                            "occupational_hazards",
+                            "genetic_risk",
+                            "chronic_lung_disease",
+                            "balanced_diet",
+                            "obesity",
+                            "smoking",
+                            "passive_smoker",
+                            "chest_pain",
+                            "coughing_of_blood",
+                            "fatigue",
+                            "weight_loss",
+                            "shortness_of_breath",
+                            "wheezing",
+                            "swallowing_difficulty",
+                            "clubbing_of_finger_nails",
+                            "frequent_cold",
+                            "dry_cough",
+                            "snoring"
+                        ],
+    "label_mapping":  {
+                          "Low":  0,
+                          "Medium":  1,
+                          "High":  2
+                      },
+    "split":  "group-aware (feature_signature), seed=42, train=697, test=303, overlap=0",
+    "metrics":  {
+                    "accuracy":  1.0,
+                    "weightedPrecision":  1.0,
+                    "weightedRecall":  1.0,
+                    "f1":  1.0
+                },
+    "confusion_matrix":  [
+                             [
+                                 87,
+                                 0,
+                                 0
+                             ],
+                             [
+                                 0,
+                                 90,
+                                 0
+                             ],
+                             [
+                                 0,
+                                 0,
+                                 126
+                             ]
+                         ],
+    "label_order":  [
+                        "Low",
+                        "Medium",
+                        "High"
+                    ]
+}

@@ -1,0 +1,48 @@
+{
+  "row_count_raw": 1000,
+  "row_count_valid": 1000,
+  "row_count_invalid": 0,
+  "valid_row_pct": 100.0,
+  "field_completeness_pct": 100.0,
+  "column_count": 24,
+  "missing_cells": 0,
+  "duplicate_patient_id": 0,
+  "duplicate_full_row": 848,
+  "unique_feature_signature": 152,
+  "duplicated_feature_rows": 848,
+  "signature_label_conflicts": 0,
+  "invalid_age": 0,
+  "invalid_gender": 0,
+  "invalid_risk_scale": 0,
+  "invalid_level": 0,
+  "checks_table": [
+    {
+      "name": "invalid_age",
+      "count": 0
+    },
+    {
+      "name": "invalid_gender",
+      "count": 0
+    },
+    {
+      "name": "invalid_risk_scale",
+      "count": 0
+    },
+    {
+      "name": "invalid_level",
+      "count": 0
+    },
+    {
+      "name": "duplicate_patient_id",
+      "count": 0
+    },
+    {
+      "name": "duplicate_full_row",
+      "count": 848
+    },
+    {
+      "name": "signature_label_conflicts",
+      "count": 0
+    }
+  ]
+}

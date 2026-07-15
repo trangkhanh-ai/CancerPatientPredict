@@ -1,0 +1,158 @@
+{
+  "total": 1000,
+  "level_distribution": {
+    "Low": 303,
+    "Medium": 332,
+    "High": 365
+  },
+  "gender_distribution": {
+    "Nam": 598,
+    "Nữ": 402
+  },
+  "age_group_distribution": {
+    "<20": 67,
+    "20-29": 234,
+    "30-39": 358,
+    "40-49": 207,
+    "50-59": 63,
+    ">=60": 71
+  },
+  "avg_indicators_by_level": {
+    "air_pollution": {
+      "Low": 2.6,
+      "Medium": 2.93,
+      "High": 5.69
+    },
+    "alcohol_use": {
+      "Low": 2.23,
+      "Medium": 4.2,
+      "High": 6.83
+    },
+    "dust_allergy": {
+      "Low": 3.11,
+      "Medium": 5.44,
+      "High": 6.62
+    },
+    "occupational_hazards": {
+      "Low": 3.0,
+      "Medium": 4.72,
+      "High": 6.48
+    },
+    "genetic_risk": {
+      "Low": 2.73,
+      "Medium": 4.29,
+      "High": 6.38
+    },
+    "chronic_lung_disease": {
+      "Low": 3.09,
+      "Medium": 3.96,
+      "High": 5.83
+    },
+    "balanced_diet": {
+      "Low": 3.0,
+      "Medium": 3.51,
+      "High": 6.62
+    },
+    "obesity": {
+      "Low": 2.41,
+      "Medium": 3.9,
+      "High": 6.68
+    },
+    "smoking": {
+      "Low": 3.02,
+      "Medium": 2.45,
+      "High": 6.07
+    },
+    "passive_smoker": {
+      "Low": 2.63,
+      "Medium": 3.05,
+      "High": 6.53
+    },
+    "chest_pain": {
+      "Low": 2.83,
+      "Medium": 3.75,
+      "High": 6.39
+    },
+    "coughing_of_blood": {
+      "Low": 2.86,
+      "Medium": 3.85,
+      "High": 7.44
+    },
+    "fatigue": {
+      "Low": 2.17,
+      "Medium": 3.49,
+      "High": 5.59
+    },
+    "weight_loss": {
+      "Low": 2.5,
+      "Medium": 4.42,
+      "High": 4.47
+    },
+    "shortness_of_breath": {
+      "Low": 2.5,
+      "Medium": 4.63,
+      "High": 5.33
+    },
+    "wheezing": {
+      "Low": 2.57,
+      "Medium": 4.76,
+      "High": 3.88
+    },
+    "swallowing_difficulty": {
+      "Low": 2.76,
+      "Medium": 4.16,
+      "High": 4.19
+    },
+    "clubbing_of_finger_nails": {
+      "Low": 2.47,
+      "Medium": 4.94,
+      "High": 4.21
+    },
+    "frequent_cold": {
+      "Low": 2.37,
+      "Medium": 3.67,
+      "High": 4.38
+    },
+    "dry_cough": {
+      "Low": 2.91,
+      "Medium": 3.7,
+      "High": 4.78
+    },
+    "snoring": {
+      "Low": 2.14,
+      "Medium": 3.31,
+      "High": 3.23
+    }
+  },
+  "avg_indicators_overall": {
+    "air_pollution": 3.84,
+    "alcohol_use": 4.56,
+    "dust_allergy": 5.17,
+    "occupational_hazards": 4.84,
+    "genetic_risk": 4.58,
+    "chronic_lung_disease": 4.38,
+    "balanced_diet": 4.49,
+    "obesity": 4.46,
+    "smoking": 3.95,
+    "passive_smoker": 4.2,
+    "chest_pain": 4.44,
+    "coughing_of_blood": 4.86,
+    "fatigue": 3.86,
+    "weight_loss": 3.85,
+    "shortness_of_breath": 4.24,
+    "wheezing": 3.78,
+    "swallowing_difficulty": 3.75,
+    "clubbing_of_finger_nails": 3.92,
+    "frequent_cold": 3.54,
+    "dry_cough": 3.85,
+    "snoring": 2.93
+  },
+  "chart_indicators": [
+    "smoking",
+    "coughing_of_blood",
+    "obesity",
+    "alcohol_use",
+    "genetic_risk"
+  ],
+  "source": "mongodb.patients"
+}

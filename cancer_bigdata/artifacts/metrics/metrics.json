@@ -1,0 +1,65 @@
+{
+  "baseline": {
+    "rows": 1000,
+    "unique_signatures": 152,
+    "duplicated_feature_rows": 848,
+    "signature_label_conflicts": 0
+  },
+  "split": {
+    "rows_train": 697,
+    "rows_test": 303,
+    "signature_overlap": 0
+  },
+  "label_order": [
+    "Low",
+    "Medium",
+    "High"
+  ],
+  "models": {
+    "LogisticRegression": {
+      "accuracy": 1.0,
+      "macro_f1": 1.0
+    },
+    "RandomForest": {
+      "accuracy": 1.0,
+      "macro_f1": 1.0
+    }
+  },
+  "confusion_matrices": {
+    "LogisticRegression": [
+      [
+        87,
+        0,
+        0
+      ],
+      [
+        0,
+        90,
+        0
+      ],
+      [
+        0,
+        0,
+        126
+      ]
+    ],
+    "RandomForest": [
+      [
+        87,
+        0,
+        0
+      ],
+      [
+        0,
+        90,
+        0
+      ],
+      [
+        0,
+        0,
+        126
+      ]
+    ]
+  },
+  "note": "group-aware split theo feature_signature, đánh giá 1 lần trên test"
+}
