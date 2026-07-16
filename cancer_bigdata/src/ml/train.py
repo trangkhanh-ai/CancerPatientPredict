@@ -25,6 +25,17 @@ from common.schema import FEATURE_COLUMNS, LABELS  # noqa: E402
 
 
 def build_lr():
+    """
+    Xây dựng Pipeline cho Logistic Regression đa lớp (Multinomial).
+    Pipeline gồm 3 bước (stages):
+      1. StringIndexer: Ánh xạ nhãn chuỗi (Low, Medium, High) sang số (0.0, 1.0, 2.0). 
+         Quan trọng: Dùng 'alphabetAsc' để cố định thứ tự ánh xạ (High=0, Low=1, Medium=2) 
+         thay vì ánh xạ ngẫu nhiên theo tần suất, giúp đồng nhất ở môi trường test/API.
+      2. VectorAssembler: Gom 23 cột chỉ số (features) thành một vector toán học duy nhất.
+      3. StandardScaler: Chuẩn hoá vector (mean=0, std=1) để tránh việc các cột có thang đo 
+         lớn lấn át các cột nhỏ trong Logistic Regression.
+      4. LogisticRegression: family="multinomial" để phân 3 lớp, hàm kích hoạt là softmax.
+    """
     return Pipeline(stages=[
         StringIndexer(inputCol="level", outputCol="label",
                       stringOrderType="alphabetAsc", handleInvalid="keep"),
@@ -46,19 +57,34 @@ def build_rf(seed=42):
 
 
 def evaluate(model, test_df, labels_order):
+    """
+    Đánh giá mô hình trên tập Test (dữ liệu mô hình chưa từng thấy).
+    """
+    # Bước 1: Dùng mô hình dự đoán nhãn cho tập Test
     preds = model.transform(test_df)
+    
+    # Bước 2: Tính các độ đo (metrics) bằng MulticlassClassificationEvaluator
     ev = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction")
     metrics = {m: ev.setMetricName(m).evaluate(preds)
                for m in ["accuracy", "weightedPrecision", "weightedRecall", "f1"]}
-    # confusion matrix theo thứ tự cố định Low/Med/High (index 0/1/2 nhờ alphabetAsc? -> map lại)
-    # alphabetAsc: High=0, Low=1, Medium=2 -> ta xuất confusion theo nhãn gốc
-    idx_labels = model.stages[0].labels  # thứ tự index -> label
+               
+    # Bước 3: Tính Ma trận nhầm lẫn (Confusion Matrix)
+    # Vì StringIndexer ánh xạ theo 'alphabetAsc' (High=0, Low=1, Medium=2),
+    # nhưng báo cáo lại yêu cầu hiện theo thứ tự (Low, Medium, High).
+    # Do đó, đoạn code này trích xuất ánh xạ gốc của mô hình (idx_labels),
+    # sau đó map ngược lại để tạo Confusion Matrix 3x3 đúng chuẩn trình bày.
+    idx_labels = model.stages[0].labels  # Lấy mảng [High, Low, Medium] từ mô hình
     cm = [[0, 0, 0] for _ in range(3)]
-    order = {lb: i for i, lb in enumerate(labels_order)}   # Low,Med,High -> 0,1,2
+    order = {lb: i for i, lb in enumerate(labels_order)}   # Tạo dict: Low:0, Med:1, High:2
+    
     rows = preds.select("label", "prediction").collect()
     for r in rows:
-        tl = idx_labels[int(r["label"])]; pl = idx_labels[int(r["prediction"])]
+        # Lấy nhãn chuỗi thực tế (tl) và nhãn chuỗi dự đoán (pl)
+        tl = idx_labels[int(r["label"])]
+        pl = idx_labels[int(r["prediction"])]
+        # Tăng biến đếm tại ô tương ứng trong ma trận 3x3
         cm[order[tl]][order[pl]] += 1
+        
     return metrics, cm, idx_labels
 
 

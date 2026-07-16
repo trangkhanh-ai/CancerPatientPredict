@@ -1,12 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-REDUCER — Tương quan yếu tố nguy cơ (Module 2).
-Nhận input đã sort theo key. Output TSV:
-  MEAN   <indicator>  <level>  <trung bình>  <n>
-  XTAB   <indicator>  <bucket> <level>  <count>
-  N      <level>      <count>
-Sau đó (ở bước import/API) tính RANK = mean(High) - mean(Low) để xếp hạng mức ảnh hưởng.
+REDUCER — Module 2 · JOB 2: Tương quan yếu tố nguy cơ (MapReduce).
+
+Nhận input đã sort theo key từ mapper_correlation.py. Output TSV 3 loại:
+  MEAN   <indicator>  <level>  <trung bình>  <n>   → trung bình chỉ số theo mức độ
+  XTAB   <indicator>  <bucket> <level>  <count>    → bảng chéo thấp/TB/cao × Low/Med/High
+  N      <level>      <count>                      → tổng số bệnh nhân từng mức độ
+
+KHÁC JOB 1: Reducer này KHÔNG chỉ đếm mà còn TÍNH TRUNG BÌNH (Σ giá trị / n).
+  - key "mean|..." → gom giá trị thực, tính mean
+  - key "xtab|..." → cộng dồn (đếm)
+  - key "n|..."    → cộng dồn (đếm)
+
+Sau bước reduce, API tính: impact = mean(High) - mean(Low) để xếp hạng.
+
+KHỚP SƠ ĐỒ: module2_JOB2_tuong_quan_TOPOLOGY.png
+  R · Reduce mean/count: MEAN = Σ giá trị / n · XTAB = Σ đếm
+  → impact = mean(High) - mean(Low) → xếp hạng nguy cơ
+
+KẾT QUẢ THẬT (khớp Tab Yếu tố nguy cơ):
+  MEAN  alcohol_use  High  6.83  365   →   impact = 6.83 - 2.23 = +4.60 (hạng 1)
+  MEAN  alcohol_use  Low   2.23  303
 """
 import sys
 

@@ -110,9 +110,14 @@ def add_age_group(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_encoded_label(df: pd.DataFrame) -> pd.DataFrame:
-    """Create the ordinal tree-model target while keeping the text label."""
+    """
+    Tạo nhãn số (Ordinal Encoding) cho mô hình dạng cây quyết định (Tree-based model).
+    Lý do: Một số thuật toán hoặc framework yêu cầu target là số nguyên (VD: 0, 1, 2)
+    thay vì chuỗi văn bản (Low, Medium, High).
+    """
     enriched = df.copy()
     # P0-01: Ensure consistency using LEVEL_ENCODING from schema
+    # (Low=0, Medium=1, High=2)
     enriched["level_encoded"] = enriched["level"].map(LEVEL_ENCODING).astype("Int64")
     return enriched
 
@@ -167,7 +172,10 @@ def main():
     
     quality_report = build_quality_report(df)
     
-    # Kiểm tra P0-13: Fail fast policy
+    # Kiểm tra P0-13: Fail-fast policy (Chính sách Dừng Sớm)
+    # Nếu tham số --fail-on-invalid được bật, hệ thống sẽ dừng toàn bộ pipeline (sys.exit)
+    # ngay khi phát hiện bất kỳ dòng dữ liệu nào vi phạm quy tắc kiểm định.
+    # Lý do: Tránh việc đưa dữ liệu bẩn/lỗi vào bước huấn luyện mô hình (Garbage In -> Garbage Out).
     invalid_rows_sum = quality_report.loc[quality_report['check_name'].str.startswith('invalid_'), 'value'].sum()
     if args.fail_on_invalid and invalid_rows_sum > 0:
         print("\n[LỖI] Phát hiện dữ liệu không hợp lệ (Fail-fast policy):")

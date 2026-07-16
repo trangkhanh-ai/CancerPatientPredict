@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-MAPPER — Phân tích TƯƠNG QUAN YẾU TỐ NGUY CƠ (Module 2).
+MAPPER — Module 2 · JOB 2: Phân tích TƯƠNG QUAN YẾU TỐ NGUY CƠ (MapReduce).
 Không dùng ML — chỉ aggregation kiểu MapReduce.
 
 Đọc CSV snake_case CÓ header từ stdin, emit 'key<TAB>value':
-  mean|<indicator>|<level>      -> <giá trị>     (để reduce tính trung bình)
-  xtab|<indicator>|<bucket>|<level> -> 1         (bảng chéo: thấp/TB/cao × mức độ)
-  n|<level>                     -> 1             (đếm số bệnh nhân mỗi mức độ)
+  mean|<indicator>|<level>        -> <giá trị>  (để reducer tính TRUNG BÌNH)
+  xtab|<indicator>|<bucket>|<lv>  -> 1          (bảng chéo: thấp/TB/cao × mức độ)
+  n|<level>                       -> 1          (đếm số bệnh nhân mỗi mức độ)
 
-bucket: 1-3 = "thap", 4-6 = "trungbinh", 7-9 = "cao"
+KHÁC JOB 1: value = GIÁ TRỊ (không phải 1). Reducer tính mean = Σ giá trị / n.
+  bucket: 1-3 = "thap", 4-6 = "trungbinh", 7-9 = "cao"
+
+KHỚP SƠ ĐỒ: module2_JOB2_tuong_quan_TOPOLOGY.png
+  HDFS → Split → M1/M2/M3 (Map impact) → Shuffle → Reduce mean/count
+  → impact = mean(High) - mean(Low) → xếp hạng nguy cơ
+
+KẾT QUẢ THẬT (khớp Tab Yếu tố nguy cơ):
+  Top 5: alcohol_use +4.60, coughing_of_blood +4.58, obesity +4.27,
+         passive_smoker +3.90 (100% High khi ≥7), genetic_risk +3.65
+  Yếu nhất: snoring +1.09
 """
 import sys, csv
 

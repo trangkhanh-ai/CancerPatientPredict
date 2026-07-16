@@ -1,10 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-MAPPER (Hadoop Streaming) — CHỈ tính phân bố dữ liệu (không train ML).
-Đọc CSV snake_case CÓ header từ stdin, emit 'key<TAB>1' cho:
-  level|<Low/Medium/High>, gender|<1/2>, age_group|<...>,
-  indicator|<tên>|<giá trị 1..9>, cross|level_age|<lv>|<ag>, cross|level_gender|<lv>|<g>
+MAPPER (Hadoop Streaming) — Module 2 · JOB 1: Đếm phân bố dữ liệu.
+
+Đọc CSV snake_case CÓ header từ stdin, emit 'key<TAB>1' cho mỗi dòng:
+  level|<Low/Medium/High>                     → đếm phân bố nhãn
+  gender|<1/2>                                → đếm theo giới tính
+  age_group|<nhóm tuổi>                       → đếm theo nhóm tuổi
+  indicator|<tên chỉ số>|<giá trị 1..9>       → phân bố từng chỉ số
+  cross|level_age|<lv>|<ag>                   → bảng chéo nhãn × tuổi
+  cross|level_gender|<lv>|<g>                 → bảng chéo nhãn × giới tính
+
+Value LUÔN là 1 → Reducer chỉ cần cộng dồn (Σ đếm).
+
+KHỚP SƠ ĐỒ: module2_JOB1_dem_phan_bo_TOPOLOGY.png
+  HDFS (1000 dòng) → Split 1-3 → M1/M2/M3 (Map phân bố)
+  → ~26 cặp (key, 1) mỗi dòng → Shuffle → Reduce Σ đếm
+  → distributions.tsv (199 dòng) → API /stats → Tab Thống kê
+
+KẾT QUẢ THẬT (khớp Tab Thống kê):
+  level|Low → 303, level|Medium → 332, level|High → 365
+  gender|1 → 598 (Nam), gender|2 → 402 (Nữ)
+  age_group|<20 → 67, 20-29 → 234, 30-39 → 358, 40-49 → 207, 50-59 → 63, >=60 → 71
 """
 import sys, csv
 

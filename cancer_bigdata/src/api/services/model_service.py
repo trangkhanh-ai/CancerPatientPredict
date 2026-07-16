@@ -54,10 +54,18 @@ class ModelService:
     async def predict(self, features: dict) -> dict:
         if not self.loaded:
             raise RuntimeError("Model chưa được nạp (thiếu Spark hoặc model artifact).")
-        async with self._lock:                       # tránh chạy song song Spark transform
+            
+        # QUAN TRỌNG: asyncio.Lock() được sử dụng ở đây
+        # Lý do: Spark (chạy nền trên JVM) không thread-safe khi gọi transform() từ nhiều thread 
+        # API FastAPI (async) đồng thời. Lock này bắt buộc các request phải xếp hàng tuần tự
+        # khi đi qua hàm transform, ngăn chặn crash JVM/Spark Context.
+        async with self._lock:                       
             t0 = time.time()
+            # Chuyển đổi dữ liệu JSON thành DataFrame 1 dòng của Spark
             row = {c: float(features[c]) for c in FEATURE_COLUMNS}
             sdf = self.spark.createDataFrame([row])
+            
+            # Predict
             pred = self.model.transform(sdf).select("prediction", "probability").first()
             idx = int(pred["prediction"])
             probs = list(pred["probability"])
