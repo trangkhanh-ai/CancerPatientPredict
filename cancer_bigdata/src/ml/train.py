@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Huấn luyện & đánh giá LR (multinomial) + RF trên tập đã chia group-aware.
+Huấn luyện & đánh giá Logistic Regression (multinomial) trên tập đã chia group-aware.
 - LR: VectorAssembler -> StandardScaler -> LogisticRegression(family=multinomial)
-- RF: VectorAssembler -> RandomForestClassifier (không cần scale)
 - Ánh xạ nhãn CỐ ĐỊNH Low=0/Medium=1/High=2 (dùng StringIndexer với stringOrderType, KHÔNG theo tần suất)
 - Đánh giá đúng MỘT LẦN trên test; xuất metrics.json + confusion_matrix.csv + PipelineModel.
 
 Chạy: spark-submit src/ml/train.py --split data/processed/split_manifest.parquet --out models
 NOTE: cần Spark + Java. Số liệu tham chiếu đã được kiểm bằng scikit-learn trên đúng
-      group-aware split (xem artifacts/metrics/metrics.json): accuracy=1.00 cho cả LR & RF,
+      group-aware split (xem artifacts/metrics/metrics.json): accuracy=1.00 cho LR,
       confusion (Low/Med/High) = [[87,0,0],[0,90,0],[0,0,126]] trên test=303.
 """
 import argparse, json, os, time
@@ -16,7 +15,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql import functions as Fx
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import VectorAssembler, StandardScaler, StringIndexer
-from pyspark.ml.classification import LogisticRegression, RandomForestClassifier
+from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 import sys
@@ -43,16 +42,6 @@ def build_lr():
         StandardScaler(inputCol="raw_features", outputCol="features", withMean=True, withStd=True),
         LogisticRegression(featuresCol="features", labelCol="label",
                            family="multinomial", maxIter=300, regParam=0.0, elasticNetParam=0.0),
-    ])
-
-
-def build_rf(seed=42):
-    return Pipeline(stages=[
-        StringIndexer(inputCol="level", outputCol="label",
-                      stringOrderType="alphabetAsc", handleInvalid="keep"),
-        VectorAssembler(inputCols=FEATURE_COLUMNS, outputCol="features", handleInvalid="skip"),
-        RandomForestClassifier(featuresCol="features", labelCol="label",
-                               numTrees=100, maxDepth=10, seed=seed),
     ])
 
 
@@ -102,7 +91,7 @@ def main():
     print(f"rows_train={train_df.count()} rows_test={test_df.count()}")
 
     results = {}
-    for name, pipe in [("logistic_regression", build_lr()), ("random_forest", build_rf(args.seed))]:
+    for name, pipe in [("logistic_regression", build_lr())]:
         t0 = time.time()
         model = pipe.fit(train_df)
         metrics, cm, idx_labels = evaluate(model, test_df, LABELS)
