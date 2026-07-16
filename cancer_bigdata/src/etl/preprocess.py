@@ -11,7 +11,7 @@ import pandas as pd
 
 # Import schema dùng chung
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from common.schema import FEATURE_COLUMNS, RAW_TO_CANONICAL, LABELS, LEVEL_ENCODING  # noqa: E402
+from common.schema import FEATURE_COLUMNS, RAW_TO_CANONICAL, LABELS, LABEL_TO_INDEX  # noqa: E402
 
 # Lấy 21 biến số (loại trừ age, gender)
 NUMERIC_FEATURE_COLUMNS = FEATURE_COLUMNS
@@ -117,8 +117,12 @@ def add_encoded_label(df: pd.DataFrame) -> pd.DataFrame:
     """
     enriched = df.copy()
     # P0-01: Ensure consistency using LEVEL_ENCODING from schema
+<<<<<<< HEAD
     # (Low=0, Medium=1, High=2)
     enriched["level_encoded"] = enriched["level"].map(LEVEL_ENCODING).astype("Int64")
+=======
+    enriched["level_encoded"] = enriched["level"].map(LABEL_TO_INDEX).astype("Int64")
+>>>>>>> 07a0c28 (Fix variable name)
     return enriched
 
 
