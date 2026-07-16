@@ -2,7 +2,3 @@
 Low,87,0,0
 Medium,0,90,0
 High,0,0,126
-"# RandomForest (rows=Low/Med/High actual, cols=predicted)"
-Low,87,0,0
-Medium,0,90,0
-High,0,0,126

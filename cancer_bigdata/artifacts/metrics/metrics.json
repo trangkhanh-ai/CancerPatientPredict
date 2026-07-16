@@ -19,31 +19,10 @@
     "LogisticRegression": {
       "accuracy": 1.0,
       "macro_f1": 1.0
-    },
-    "RandomForest": {
-      "accuracy": 1.0,
-      "macro_f1": 1.0
     }
   },
   "confusion_matrices": {
     "LogisticRegression": [
-      [
-        87,
-        0,
-        0
-      ],
-      [
-        0,
-        90,
-        0
-      ],
-      [
-        0,
-        0,
-        126
-      ]
-    ],
-    "RandomForest": [
       [
         87,
         0,

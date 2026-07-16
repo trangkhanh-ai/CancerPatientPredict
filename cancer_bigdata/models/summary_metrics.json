@@ -29,36 +29,5 @@
       "High"
     ],
     "train_time_s": 13.73
-  },
-  "random_forest": {
-    "metrics": {
-      "accuracy": 1.0,
-      "weightedPrecision": 1.0,
-      "weightedRecall": 1.0,
-      "f1": 1.0
-    },
-    "confusion_matrix": [
-      [
-        87,
-        0,
-        0
-      ],
-      [
-        0,
-        90,
-        0
-      ],
-      [
-        0,
-        0,
-        126
-      ]
-    ],
-    "label_order": [
-      "Low",
-      "Medium",
-      "High"
-    ],
-    "train_time_s": 7.36
   }
 }

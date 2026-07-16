@@ -9,7 +9,6 @@ Xuất:  artifacts/metrics/metrics.json  +  artifacts/metrics/confusion_group_aw
 import os, sys, json, csv, hashlib
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 
@@ -70,7 +69,6 @@ def main():
     confusions = {}
     models = {
         "LogisticRegression": (LogisticRegression(max_iter=300, C=100.0), True),
-        "RandomForest": (RandomForestClassifier(n_estimators=100, max_depth=10, random_state=SEED), False),
     }
     for name, (clf, scale) in models.items():
         a_tr, a_te = (scaler.transform(Xtr), scaler.transform(Xte)) if scale else (Xtr, Xte)
