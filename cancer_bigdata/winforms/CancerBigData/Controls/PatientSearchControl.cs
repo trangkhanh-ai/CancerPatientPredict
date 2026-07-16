@@ -46,10 +46,14 @@ namespace CancerBigData.UI
         private readonly Button _btnExport = new Button();
 
         private readonly DataGridView _grid = new DataGridView();
+        private readonly Button _btnFirst = new Button();
         private readonly Button _btnPrev = new Button();
         private readonly Button _btnNext = new Button();
+        private readonly Button _btnLast = new Button();
+        private readonly FlowLayoutPanel _pageButtons = new FlowLayoutPanel();
         private readonly Label _lblPage = new Label();
         private readonly Label _lblStatus = new Label();
+        private readonly ComboBox _cbPageSize = new ComboBox();
 
         private int _page = 1;
         private int _pageSize = 20;
@@ -139,22 +143,53 @@ namespace CancerBigData.UI
             _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             _grid.CellDoubleClick += (s, e) => ShowDetail(e.RowIndex);
 
-            // ---- phân trang ----
-            _btnPrev.Text = "◀ Trang trước"; _btnPrev.SetBounds(12, 560, 110, 28); _btnPrev.FlatStyle = FlatStyle.Flat;
+            // ---- phân trang: đầu / trước / số trang / sau / cuối ----
+            _btnFirst.Text = "⏮ Đầu"; _btnFirst.SetBounds(12, 560, 72, 30); _btnFirst.FlatStyle = FlatStyle.Flat;
+            _btnFirst.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            _btnFirst.Click += async (s, e) => { if (_page > 1) { _page = 1; await SearchAsync(false); } };
+
+            _btnPrev.Text = "◀ Trước"; _btnPrev.SetBounds(90, 560, 82, 30); _btnPrev.FlatStyle = FlatStyle.Flat;
             _btnPrev.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             _btnPrev.Click += async (s, e) => { if (_page > 1) { _page--; await SearchAsync(false); } };
 
-            _lblPage.Text = "Trang 1 / 1"; _lblPage.SetBounds(132, 566, 120, 20); _lblPage.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-            _lblPage.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            _pageButtons.SetBounds(178, 560, 250, 32);
+            _pageButtons.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            _pageButtons.WrapContents = false;
+            _pageButtons.Margin = Padding.Empty;
 
-            _btnNext.Text = "Trang sau ▶"; _btnNext.SetBounds(256, 560, 110, 28); _btnNext.FlatStyle = FlatStyle.Flat;
+            _btnNext.Text = "Sau ▶"; _btnNext.SetBounds(434, 560, 82, 30); _btnNext.FlatStyle = FlatStyle.Flat;
             _btnNext.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             _btnNext.Click += async (s, e) => { if (_page < _totalPages) { _page++; await SearchAsync(false); } };
 
-            _lblStatus.Text = "Sẵn sàng"; _lblStatus.ForeColor = MUT; _lblStatus.AutoSize = true;
-            _lblStatus.SetBounds(390, 566, 400, 20); _lblStatus.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            _btnLast.Text = "Cuối ⏭"; _btnLast.SetBounds(522, 560, 72, 30); _btnLast.FlatStyle = FlatStyle.Flat;
+            _btnLast.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            _btnLast.Click += async (s, e) => { if (_page < _totalPages) { _page = _totalPages; await SearchAsync(false); } };
 
-            Controls.AddRange(new Control[] { title, pnl, _grid, _btnPrev, _lblPage, _btnNext, _lblStatus });
+            _lblPage.Text = "Trang 1 / 1"; _lblPage.SetBounds(604, 566, 110, 20); _lblPage.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            _lblPage.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+
+            var lblPageSize = new Label { Text = "Số dòng:", AutoSize = true, ForeColor = MUT };
+            lblPageSize.SetBounds(720, 567, 58, 20);
+            lblPageSize.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            _cbPageSize.Items.AddRange(new object[] { 20, 50, 100 });
+            _cbPageSize.SelectedItem = _pageSize;
+            _cbPageSize.DropDownStyle = ComboBoxStyle.DropDownList;
+            _cbPageSize.SetBounds(780, 562, 62, 28);
+            _cbPageSize.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            _cbPageSize.SelectedIndexChanged += async (s, e) =>
+            {
+                if (_cbPageSize.SelectedItem is int size && size != _pageSize)
+                {
+                    _pageSize = size;
+                    await SearchAsync(resetPage: true);
+                }
+            };
+
+            _lblStatus.Text = "Sẵn sàng"; _lblStatus.ForeColor = MUT; _lblStatus.AutoSize = true;
+            _lblStatus.SetBounds(12, 600, 900, 20); _lblStatus.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+
+            Controls.AddRange(new Control[] { title, pnl, _grid, _btnFirst, _btnPrev, _pageButtons,
+                _btnNext, _btnLast, _lblPage, lblPageSize, _cbPageSize, _lblStatus });
             Resize += (s, e) => { pnl.Width = Width - 24; _grid.Width = Width - 24; };
         }
 
@@ -215,10 +250,18 @@ namespace CancerBigData.UI
 
                 FillGrid(res.Items);
                 _totalPages = Math.Max(1, res.TotalPages);
+                _page = Math.Max(1, Math.Min(res.Page, _totalPages));
                 _lblPage.Text = $"Trang {res.Page} / {_totalPages}";
+                _btnFirst.Enabled = res.Page > 1;
                 _btnPrev.Enabled = res.Page > 1;
                 _btnNext.Enabled = res.Page < _totalPages;
-                _lblStatus.Text = $"Tìm thấy {res.Total} bệnh nhân ({_pageSize}/trang). Nhấn đúp một hàng để xem chi tiết.";
+                _btnLast.Enabled = res.Page < _totalPages;
+                RenderPageButtons();
+
+                int first = res.Total == 0 ? 0 : ((res.Page - 1) * res.PageSize) + 1;
+                int last = Math.Min(res.Page * res.PageSize, res.Total);
+                string scope = HasActiveFilters() ? "phù hợp bộ lọc" : "trong toàn bộ dữ liệu";
+                _lblStatus.Text = $"Hiển thị {first}–{last} / {res.Total} bệnh nhân {scope}. Nhấn đúp một hàng để xem chi tiết.";
             }
             catch (OperationCanceledException) { /* bỏ qua request cũ */ }
             catch (Exception ex)
@@ -229,6 +272,44 @@ namespace CancerBigData.UI
             }
             finally { _btnSearch.Enabled = true; }
         }
+
+        /// <summary>Hiển thị tối đa 5 nút số trang quanh trang hiện tại.</summary>
+        private void RenderPageButtons()
+        {
+            _pageButtons.Controls.Clear();
+            int start = Math.Max(1, _page - 2);
+            int end = Math.Min(_totalPages, start + 4);
+            start = Math.Max(1, end - 4);
+
+            for (int pageNumber = start; pageNumber <= end; pageNumber++)
+            {
+                int targetPage = pageNumber;
+                var button = new Button
+                {
+                    Text = targetPage.ToString(),
+                    Width = 42,
+                    Height = 30,
+                    Margin = new Padding(0, 0, 6, 0),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = targetPage == _page ? BLUE : Color.White,
+                    ForeColor = targetPage == _page ? Color.White : Color.FromArgb(45, 52, 61),
+                    Enabled = targetPage != _page
+                };
+                button.Click += async (s, e) =>
+                {
+                    _page = targetPage;
+                    await SearchAsync(resetPage: false);
+                };
+                _pageButtons.Controls.Add(button);
+            }
+        }
+
+        private bool HasActiveFilters()
+            => _cbLevel.SelectedIndex > 0
+               || _cbGender.SelectedIndex > 0
+               || _numAgeMin.Value > 0
+               || _numAgeMax.Value < 120
+               || _cbFeature.SelectedIndex > 0;
 
         private void FillGrid(List<Dictionary<string, object>> items)
         {

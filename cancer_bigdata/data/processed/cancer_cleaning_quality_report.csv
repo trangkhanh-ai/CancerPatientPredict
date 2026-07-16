@@ -1,0 +1,9 @@
+﻿check_name,value,meaning
+invalid_gender,0,"Count of records where gender is not in {1, 2}."
+invalid_age,0,"Count of records where age falls outside [0, 120]."
+invalid_risk_scale,0,"Total instances across 21 risk/symptom columns outside [1, 9]."
+invalid_level,0,"Count of records where level is not Low, Medium, or High."
+row_count,1000,Rows preserved after preprocessing.
+column_count_clean,25,Columns after schema standardization.
+missing_total,0,Total missing values after coercion.
+duplicated_patient_id,0,Duplicate patient_id count for business-key monitoring.

@@ -117,12 +117,8 @@ def add_encoded_label(df: pd.DataFrame) -> pd.DataFrame:
     """
     enriched = df.copy()
     # P0-01: Ensure consistency using LEVEL_ENCODING from schema
-<<<<<<< HEAD
     # (Low=0, Medium=1, High=2)
-    enriched["level_encoded"] = enriched["level"].map(LEVEL_ENCODING).astype("Int64")
-=======
     enriched["level_encoded"] = enriched["level"].map(LABEL_TO_INDEX).astype("Int64")
->>>>>>> 07a0c28 (Fix variable name)
     return enriched
 
 
