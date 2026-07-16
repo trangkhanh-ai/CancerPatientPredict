@@ -27,6 +27,7 @@ namespace CancerBigData.UI
         private readonly Panel _pnlKpi = new Panel();
         private readonly Panel _pnlDonut = new Panel();
         private readonly Panel _pnlBars = new Panel();
+        private readonly CheckedListBox _featureSelector = new CheckedListBox();
         private readonly DataGridView _grid = new DataGridView();
         private readonly Button _btnReload = new Button();
         private readonly Label _lblStatus = new Label();
@@ -57,31 +58,43 @@ namespace CancerBigData.UI
             _pnlKpi.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _pnlKpi.Paint += DrawKpi;
 
-            _pnlDonut.Left = 12; _pnlDonut.Top = 140; _pnlDonut.Size = new Size(370, 300);
+            _pnlDonut.Left = 12; _pnlDonut.Top = 140; _pnlDonut.Size = new Size(370, 340);
             _pnlDonut.BackColor = Color.White; _pnlDonut.BorderStyle = BorderStyle.FixedSingle;
             _pnlDonut.Paint += DrawDonut;
 
-            _pnlBars.Left = 394; _pnlBars.Top = 140; _pnlBars.Size = new Size(770, 300);
+            _pnlBars.Left = 394; _pnlBars.Top = 140; _pnlBars.Size = new Size(770, 340);
             _pnlBars.BackColor = Color.White; _pnlBars.BorderStyle = BorderStyle.FixedSingle;
             _pnlBars.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _pnlBars.Paint += DrawBars;
 
-            _grid.Left = 12; _grid.Top = 452; _grid.Size = new Size(1152, 150);
+            _featureSelector.Left = 394; _featureSelector.Top = 112; _featureSelector.Width = 770; _featureSelector.Height = 24;
+            _featureSelector.CheckOnClick = true;
+            _featureSelector.BorderStyle = BorderStyle.FixedSingle;
+            _featureSelector.ItemCheck += (s, e) => _pnlBars.Invalidate();
+
+            _grid.Left = 12; _grid.Top = 500; _grid.Size = new Size(1152, 230);
             _grid.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
             _grid.ReadOnly = true; _grid.AllowUserToAddRows = false; _grid.RowHeadersVisible = false;
-            _grid.BackgroundColor = Color.White; _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            _grid.BackgroundColor = Color.White; _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            _grid.RowTemplate.Height = 28;
             _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            _grid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            _grid.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
 
             _lblStatus.Text = "Sẵn sàng"; _lblStatus.ForeColor = MUT; _lblStatus.AutoSize = true;
             _lblStatus.SetBounds(16, 610, 700, 20); _lblStatus.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
 
-            Controls.AddRange(new Control[] { title, _btnReload, _pnlKpi, _pnlDonut, _pnlBars, _grid, _lblStatus });
+            Controls.AddRange(new Control[] { title, _btnReload, _pnlKpi, _pnlDonut, _featureSelector, _pnlBars, _grid, _lblStatus });
             Resize += (s, e) =>
             {
                 _btnReload.Left = Width - 124; _btnReload.Top = 12;
                 _pnlKpi.Width = Width - 24;
-                _pnlBars.Width = Width - 406;
+                _pnlDonut.Width = Math.Max(320, (Width - 48) / 3);
+                _featureSelector.Width = Width - 420;
+                _pnlBars.Left = _pnlDonut.Right + 12;
+                _pnlBars.Width = Width - _pnlBars.Left - 12;
                 _grid.Width = Width - 24;
+                _grid.Height = Math.Max(220, Height - 300);
             };
         }
 
@@ -92,6 +105,7 @@ namespace CancerBigData.UI
                 _lblStatus.Text = "Đang tải thống kê...";
                 _data = await _api.GetStatsAsync();
                 FillGrid();
+                PopulateFeatureSelector();
                 _pnlKpi.Invalidate(); _pnlDonut.Invalidate(); _pnlBars.Invalidate();
                 _lblStatus.Text = $"Đã thống kê {_data.Total} bệnh nhân."; _lblStatus.ForeColor = MUT;
             }
@@ -123,6 +137,15 @@ namespace CancerBigData.UI
 
             _grid.Rows[0].Cells[0].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             _grid.Rows[1].Cells[0].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+        }
+
+        private void PopulateFeatureSelector()
+        {
+            _featureSelector.Items.Clear();
+            foreach (var feature in _data.ChartIndicators)
+            {
+                _featureSelector.Items.Add(feature, true);
+            }
         }
 
         // ---------- KPI cards ----------
@@ -203,9 +226,13 @@ namespace CancerBigData.UI
             var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
             using var fTitle = new Font("Segoe UI", 11, FontStyle.Bold);
             using var fSmall = new Font("Segoe UI", 8);
+            using var fValue = new Font("Segoe UI", 7, FontStyle.Bold);
             g.DrawString("Trung bình chỉ số theo mức độ (thang 1–9)", fTitle, Brushes.Black, 14, 12);
 
-            var inds = _data.ChartIndicators.Where(c => _data.AvgByLevel.ContainsKey(c)).ToList();
+            var inds = _data.ChartIndicators
+                .Where(c => _featureSelector.Items.Contains(c) && _featureSelector.GetItemChecked(_featureSelector.Items.IndexOf(c)))
+                .Where(c => _data.AvgByLevel.ContainsKey(c))
+                .ToList();
             if (inds.Count == 0) return;
 
             var order = new[] { ("Low", LOW), ("Medium", MED), ("High", HIGH) };
@@ -214,7 +241,6 @@ namespace CancerBigData.UI
             int groupW = (_pnlBars.Width - x0 - 20) / inds.Count;
             int barW = Math.Min(26, (groupW - 24) / 3);
 
-            // trục + chú giải
             using (var pen = new Pen(Color.FromArgb(220, 224, 230)))
                 for (int v = 0; v <= 9; v += 3)
                 {
@@ -240,7 +266,10 @@ namespace CancerBigData.UI
                     double v = _data.AvgByLevel[inds[i]].TryGetValue(lv, out var mv) ? mv : 0.0;
                     int h = (int)(chartH * v / maxVal);
                     using var br = new SolidBrush(col);
-                    g.FillRectangle(br, gx + j * (barW + 4), y1 - h, barW, h);
+                    int barX = gx + j * (barW + 4);
+                    int barY = y1 - h;
+                    g.FillRectangle(br, barX, barY, barW, h);
+                    g.DrawString(v.ToString("0.0"), fValue, Brushes.Black, barX - 2, Math.Max(18, barY - 18));
                 }
                 string nm = inds[i].Length > 14 ? inds[i].Substring(0, 13) + "…" : inds[i];
                 g.DrawString(nm, fSmall, Brushes.Black, gx - 4, y1 + 6);
