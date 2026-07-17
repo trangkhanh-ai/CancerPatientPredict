@@ -24,48 +24,63 @@ def load_source_dataset(data_path: Path) -> pd.DataFrame:
     """Load the raw Excel dataset and validate the expected source schema."""
     df_raw = pd.read_excel(data_path)
     expected_columns = list(RAW_TO_CANONICAL.keys())
+    # Kiểm tra xem có cột nào bị thiếu so với schema mong đợi hay không
     missing_columns = [column for column in expected_columns if column not in df_raw.columns]
+    # Kiểm tra xem có cột lạ/thừa nào xuất hiện ngoài thiết kế hay không
     unexpected_columns = [column for column in df_raw.columns if column not in expected_columns]
 
+    # Nếu có bất kỳ sự bất nhất nào về cột (thiếu hoặc thừa cột)
     if missing_columns or unexpected_columns:
+        # Ném ra ngoại lệ ValueError để thông báo cấu trúc file Excel không hợp lệ
         raise ValueError(
             "Source schema mismatch. "
             f"Missing columns: {missing_columns}. "
             f"Unexpected columns: {unexpected_columns}."
         )
 
+    # Trả về bản sao dữ liệu chỉ chứa các cột đã được định nghĩa trong schema mong đợi
     return df_raw[expected_columns].copy()
 
 
 def standardize_schema(df_raw: pd.DataFrame) -> pd.DataFrame:
-    """Rename raw Excel columns to stable snake_case pipeline fields."""
+    """Đổi tên các cột thô trong Excel thành định dạng snake_case chuẩn hoá."""
+    # rename() nhận vào từ điển ánh xạ RAW_TO_CANONICAL (ví dụ: 'Age' -> 'age')
     return df_raw.rename(columns=RAW_TO_CANONICAL).copy()
 
 
 def clean_text_fields(df: pd.DataFrame) -> pd.DataFrame:
-    """Clean identifiers and categorical target labels without dropping rows."""
+    """Làm sạch các trường văn bản: cắt khoảng trắng thừa và chuẩn hoá định dạng chữ."""
     cleaned = df.copy()
+    # Ép kiểu patient_id về string và loại bỏ khoảng trắng hai đầu (.str.strip)
     cleaned["patient_id"] = cleaned["patient_id"].astype(str).str.strip()
+    # Ép kiểu level về string, loại bỏ khoảng trắng và chuyển chữ cái đầu thành viết hoa (.str.title)
     cleaned["level"] = cleaned["level"].astype(str).str.strip().str.title()
     return cleaned
 
 
 def cast_numeric_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Coerce all numeric feature columns to numeric values for validation and ML."""
+    """Ép kiểu dữ liệu của 23 cột đặc trưng về dạng số thực (float/int)."""
     casted = df.copy()
+    # Duyệt qua từng cột trong danh sách đặc trưng số
     for column in NUMERIC_FEATURE_COLUMNS:
+        # pd.to_numeric chuyển đổi giá trị sang kiểu số.
+        # errors="coerce" sẽ biến các giá trị lỗi (chữ, ô trống) thành NaN (giá trị rỗng) thay vì báo lỗi dừng chương trình.
         casted[column] = pd.to_numeric(casted[column], errors="coerce")
     return casted
 
 
 def build_quality_report(df: pd.DataFrame) -> pd.DataFrame:
-    """Build the data quality execution log required by the pipeline report."""
+    """Xây dựng báo cáo chất lượng dữ liệu dựa trên các quy tắc kiểm định."""
+    # Tính tổng số ô dữ liệu bị vượt ngoài thang điểm 1-9 trên 21 cột chỉ số nguy cơ
+    # (~df[column].between(1, 9)).sum() đếm số ô không nằm trong khoảng [1, 9]
     invalid_risk_scale = sum(
         (~df[column].between(1, 9)).sum() for column in RISK_SCALE_COLUMNS
     )
+    # Khởi tạo danh sách các phép kiểm tra chất lượng (check_name, giá trị đếm lỗi, mô tả ý nghĩa)
     checks = [
         (
             "invalid_gender",
+            # Đếm số bản ghi có giới tính không thuộc {1, 2}
             int((~df["gender"].isin([1, 2])).sum()),
             "Count of records where gender is not in {1, 2}.",
         ),
@@ -145,14 +160,17 @@ def print_statistical_verification(df: pd.DataFrame) -> None:
 
 
 def main():
+    # Khởi tạo bộ phân tích tham số dòng lệnh CLI
     parser = argparse.ArgumentParser(description="Tiền xử lý dữ liệu ung thư.")
     parser.add_argument("--input", required=True, help="Đường dẫn file Excel gốc")
     parser.add_argument("--outdir", required=True, help="Thư mục đầu ra cho các file CSV")
     parser.add_argument("--fail-on-invalid", action="store_true", help="Dừng chương trình nếu dữ liệu không hợp lệ")
     args = parser.parse_args()
 
+    # Khởi tạo các đường dẫn thư mục và file đầu ra
     data_path = Path(args.input)
     output_dir = Path(args.outdir)
+    # Tạo thư mục đầu ra nếu chưa tồn tại (bao gồm cả thư mục cha)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     HDFS_OUTPUT = output_dir / "cancer_patients_clean_hdfs.csv"
@@ -160,21 +178,32 @@ def main():
     QUALITY_OUTPUT = output_dir / "cancer_cleaning_quality_report.csv"
 
     print(f"Reading dataset from {data_path}...")
+    # Bước 1: Đọc tệp Excel gốc và kiểm tra cấu trúc cột
     df = load_source_dataset(data_path)
+    # Bước 2: Chuẩn hóa tên cột sang snake_case
     df = standardize_schema(df)
+    # Bước 3: Làm sạch khoảng trắng dữ liệu chuỗi (patient_id, level)
     df = clean_text_fields(df)
+    # Bước 4: Ép kiểu số cho 23 cột đặc trưng (và chuyển giá trị lỗi thành NaN)
     df = cast_numeric_features(df)
     
+    # Bước 5: Chạy các bài kiểm định chất lượng dữ liệu để phát hiện lỗi
     quality_report = build_quality_report(df)
     
-    # Kiểm tra P0-13: Fail fast policy
+    # Kiểm tra P0-13: Fail-fast policy (Chính sách Dừng Sớm)
+    # Cộng tổng tất cả các lỗi bắt đầu bằng 'invalid_' trong báo cáo chất lượng
     invalid_rows_sum = quality_report.loc[quality_report['check_name'].str.startswith('invalid_'), 'value'].sum()
+    # Nếu tham số --fail-on-invalid được bật và phát hiện lỗi dữ liệu bẩn
     if args.fail_on_invalid and invalid_rows_sum > 0:
         print("\n[LỖI] Phát hiện dữ liệu không hợp lệ (Fail-fast policy):")
+        # In ra các lỗi cụ thể để kiểm tra
         print(quality_report[quality_report['check_name'].str.startswith('invalid_')])
+        # Thoát chương trình với mã lỗi 1 để dừng pipeline ngay lập tức
         sys.exit(1)
 
+    # Bước 6: Phân nhóm độ tuổi thành các khoảng 10 năm cho phân tích MapReduce
     df = add_age_group(df)
+    # Bước 7: Thêm cột nhãn số level_encoded (Low=0, Medium=1, High=2) cho huấn luyện ML
     df = add_encoded_label(df)
 
     df_hdfs, df_ml = build_output_frames(df)
