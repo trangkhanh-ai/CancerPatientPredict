@@ -10,14 +10,17 @@ from mongodb.client import get_db  # noqa: E402
 
 
 def parse_tsv(path: str) -> dict:
+    """Đọc tệp kết quả TSV từ MapReduce và chuyển đổi thành một từ điển Python."""
     dist = {}
     with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.rstrip("\n")
             if not line:
                 continue
+            # Chia dòng theo ký tự Tab (\t) thành: khóa (key) và giá trị (val)
             key, _, val = line.partition("\t")
             try:
+                # Lưu khóa và ép kiểu giá trị đếm sang số nguyên
                 dist[key] = int(val)
             except ValueError:
                 continue
@@ -25,20 +28,29 @@ def parse_tsv(path: str) -> dict:
 
 
 def main():
+    # Khởi tạo bộ phân tích tham số dòng lệnh CLI
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", required=True)
     args = ap.parse_args()
 
+    # Bước 1: Đọc và phân tích tệp TSV
     dist = parse_tsv(args.input)
     now = datetime.datetime.utcnow()
-    # tách vài nhóm hay dùng cho tiện tra cứu
+    
+    # Bước 2: Tách nhỏ kết quả phân bố thành các nhóm nhỏ (level, giới tính, nhóm tuổi) để tiện truy vấn
+    # Lấy phân bố mức độ (level): Lọc các khóa bắt đầu bằng 'level|'
     level = {k.split("|", 1)[1]: v for k, v in dist.items() if k.startswith("level|")}
+    # Lấy phân bố giới tính (gender): Lọc các khóa bắt đầu bằng 'gender|'
     gender = {k.split("|", 1)[1]: v for k, v in dist.items() if k.startswith("gender|")}
+    # Lấy phân bố nhóm tuổi (age_group): Lọc các khóa bắt đầu bằng 'age_group|'
     age_group = {k.split("|", 1)[1]: v for k, v in dist.items() if k.startswith("age_group|")}
 
+    # Bước 3: Đóng gói thành một JSON Document hoàn chỉnh chứa thông tin thống kê phân phối
     doc = {"created_at": now, "source": "hadoop_streaming", "n_keys": len(dist),
            "level_distribution": level, "gender_distribution": gender,
            "age_group_distribution": age_group, "distributions": dist}
+           
+    # Bước 4: Kết nối MongoDB và đẩy bản ghi này vào collection stats_mapreduce
     db = get_db()
     db.stats_mapreduce.insert_one(doc)
     print(f"[OK] stats_mapreduce +1 doc | keys={len(dist)} level={level} at {now.isoformat()}")
