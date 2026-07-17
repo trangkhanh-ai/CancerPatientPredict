@@ -2,6 +2,12 @@
 """
 Nạp kết quả phân bố từ MapReduce (artifacts/distributions.tsv) vào collection stats_mapreduce.
 Mỗi lần chạy tạo 1 document snapshot có created_at (để /stats lấy mapreduce_run_at mới nhất).
+
+⚠️ [QUAN TRỌNG - PHỤC VỤ VẤN ĐÁP]:
+- Tệp này KHÔNG PHẢI là hàm Map (Mapper) hay Reduce (Reducer) của Hadoop.
+- Đây chỉ là tệp tiện ích Python (Utility Script) dùng để đọc tệp kết quả TSV cuối cùng
+  sau khi chạy Hadoop MapReduce xong, rồi lưu thông tin đó vào MongoDB để API/WinForms hiển thị.
+  
 Chạy: python -m src.mongodb.import_mapreduce_stats --input artifacts/distributions.tsv
 """
 import sys, os, argparse, datetime
